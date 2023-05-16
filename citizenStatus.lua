@@ -150,11 +150,11 @@ end
 
 function SetJobColor(job)
     local jobColors = {
-        ["Knight"] = colors.magenta,
+        ["Knight"] = colors.magenta, -- does not work atm
         ["deliveryman"] = colors.yellow,
-        ["Archer"] = colors.pink,
+        ["Archer"] = colors.pink, -- does not work atm
         ["builder"] = colors.brown,
-        ["Druid"] = colors.lime,
+        ["Druid"] = colors.lime, -- does not work atm
         ["enchanter"] = colors.purple,
         ["farmer"] = colors.cyan,
         ["school"] = colors.orange,
