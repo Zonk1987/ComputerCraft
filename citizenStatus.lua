@@ -133,7 +133,7 @@ end
 -- Displays a table of citizens on the monitor.
 function ShowCitizens()
     local counter = 1
-    local row = 1
+    local row = 5
     local column = 1
     local citizens = colony.getCitizens()
     table.sort(citizens, SortTable)  -- Compare and sort elements in a table using the SortTable function
@@ -142,29 +142,39 @@ function ShowCitizens()
     -- Define the table headings
     local headings = {
         {name = "ID", width = 4, alignment = "center", color = colors.white},
-        {name = "|", width = 1, alignment = "center", color = colors.white},
         {name = "Name", width = 10, alignment = "left", color = colors.white},
-        {name = "|", width = 1, alignment = "center", color = colors.white},
         {name = "Location (X, Y, Z)", width = 19, alignment = "center", color = colors.white},
-        {name = "|", width = 1, alignment = "center", color = colors.white},
         {name = "Job", width = 15, alignment = "left", color = colors.white},
-        {name = "|", width = 1, alignment = "center", color = colors.white},
-        {name = "Status", width = 17, alignment = "center", color = colors.white},
-        {name = "|", width = 1, alignment = "center", color = colors.white},
+        {name = "Status", width = 19, alignment = "center", color = colors.white},
         {name = "Happiness", width = 10, alignment = "center", color = colors.white},
-        {name = "|", width = 1, alignment = "center", color = colors.white},
         {name = "Commute", width = 10, alignment = "center", color = colors.white}
     }
 
+    -- Clear the monitor
     mon.clear()
 
     -- Write the table headings to the monitor
-    for _, heading in ipairs(headings) do
+    for i, heading in ipairs(headings) do
+        mon.setTextColor(heading.color)
         local headingText = string.sub(heading.name, 1, heading.width, heading.color)
         local headingLength = #headingText
-        mon.setTextColor(heading.color)
-        mon.setCursorPos(column, 2)
-        mon.write(FillCellWithEquals(heading.width+1))
+
+        -- Calculate the total width of the table
+        local totalWidth = 0
+        for _, heading in ipairs(headings) do
+            totalWidth = totalWidth + heading.width
+        end
+        totalWidth = totalWidth + #headings - 1  -- Account for the separators '|'
+
+        -- Write the separator line between columns
+        if i < #headings then
+            mon.setCursorPos(column + heading.width, row)
+            mon.write("|")
+        end
+        
+        -- Write the second line with equals sign
+        mon.setCursorPos(1, row + 1)
+        mon.write(FillCellWithEquals(totalWidth)) 
 
         if heading.alignment == "left" then
             mon.setCursorPos(column, row)
@@ -182,7 +192,6 @@ function ShowCitizens()
 
             mon.setCursorPos(column + headingPadding, row)
             mon.write(headingText)
-
         end
 
         column = column + heading.width + 1
@@ -205,16 +214,13 @@ function ShowCitizens()
         local workLocation = citizen.work and citizen.work.location or nil
 
         -- Write the citizen data to the monitor
-        for _, heading in ipairs(headings) do
+        for i, heading in ipairs(headings) do
             local content = ""
             local contentAlignment = "left"
 
             if heading.name == "ID" then
                 content = decimal_to_normal(id)
                 contentAlignment = "center"
-                contentColor = colors.white
-            elseif heading.name == "|" then
-                content = "|"
                 contentColor = colors.white
             elseif heading.name == "Name" then
                 content = FirstName(displayName)
@@ -259,11 +265,20 @@ function ShowCitizens()
                 mon.setCursorPos(column + contentPadding, row)
             end
 
-            -- Write the content
+            -- Set content color
             if contentColor then
                 mon.setTextColor(contentColor)
             end
+
+            -- Write the content
             mon.write(content)
+
+            -- Write the separator line between columns
+            if i < #headings then
+                mon.setCursorPos(column + heading.width, row)
+                mon.setTextColor(heading.color)
+                mon.write("|")
+            end
 
             column = column + heading.width + 1
         end
