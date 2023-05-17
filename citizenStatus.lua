@@ -1,107 +1,73 @@
 -- Config
-local sortOpt = "ID" -- There are options to sort the Table by "Job; Name; ID"
+local sortOpt = "ID" -- Set the desired sorting option (e.g., "Job", "Name", "ID")
 
--- Startup Stuff
-local colony = peripheral.find("colonyIntegrator")
-if not colony then
-    error("Colony Integrator not found.")
+-- Checks if a peripheral with the specified name exists and returns it.
+-- Throws an error if the peripheral is not found.
+local function checkPeripheral(name, errorMessage)
+    local peripheral = peripheral.find(name)
+    assert(peripheral, errorMessage)
+    return peripheral
 end
-if not colony.isInColony then
-    error("Colony Integrator is not in a colony.")
-end
+
+-- Check if "colonyIntegrator" peripheral exists and assign it to "colony"
+local colony = checkPeripheral("colonyIntegrator", "Colony Integrator not found.")
+assert(colony.isInColony, "Colony Integrator is not in a colony.")
 print("Colony Integrator initialized.")
 
-local mon = peripheral.find("monitor")
-if not mon then
-    error("Monitor not found.")
-end
+-- Check if "monitor" peripheral exists and assign it to "mon"
+local mon = checkPeripheral("monitor", "Monitor not found.")
 print("Monitor initialized.")
--- End Startup Stuff
 
+
+-- Sorts a table based on the specified sorting option.
 function SortTable(a, b)
     if sortOpt == "Job" then
-        local aJob = a["work"] and a["work"]["type"] or nil
-        local bJob = b["work"] and b["work"]["type"] or nil
-        if (a == nil or aJob == nil) then
-            return false
-        end
-        if (b == nil or bJob == nil) then
-            return false
-        end
-        return aJob < bJob
+        local aJob = a.work and a.work.type
+        local bJob = b.work and b.work.type
+        return aJob and bJob and aJob < bJob
     elseif sortOpt == "Name" then
-        local aName = a["name"]
-        local bN = b["name"]
-        if aName == nil then
-            return false
-        end
-        if bN == nil then
-            return false
-        end
-        return aName < bN
+        return a.name and b.name and a.name < b.name
     elseif sortOpt == "ID" then
-        local aID = a["id"] or 0
-        local bID = b["id"] or 0
-        return aID < bID
+        return (a.id or 0) < (b.id or 0)
     end
 end
 
-local function firstToUpper(str)
-    if str == nil then
-        return ""
-    else
-        return (str:gsub("^%l", string.upper))
-    end
+-- Converts the first character of a string to uppercase.
+function firstToUpper(str)
+    return (str or ""):gsub("^%l", string.upper)
 end
 
-local function decimal_to_normal(num)
-    if num == nil then
-        return ""
-    else
-        local formattedNum = string.format("%2d", num)
-        if num < 10 then
-            formattedNum = " " .. formattedNum
-        end
-        return formattedNum
-    end
+-- Converts a decimal number to a normal number by formatting it with leading spaces to a width of 2 characters.
+function decimal_to_normal(num)
+    local formattedNum = string.format("%2d", num or "")
+    return formattedNum
 end
 
+-- Formats a given number by padding it with leading spaces to a width of 3 characters.
 function FormatNumber(number)
-    local formattedNumber = string.format("%d", number)
-
-    if number < 10 then
-        formattedNumber = "  " .. formattedNumber
-    elseif number < 100 then
-        formattedNumber = " " .. formattedNumber
-    end
-
+    local formattedNumber = string.format("%3d", number)
     return formattedNumber
 end
 
-function FirstName(name)
-    local returnStr = ""
-    for i = 1, #name do
-        local char = string.sub(name, i, i)
-        if (char == " " or i == 9) then
-            return returnStr
-        end
-        returnStr = returnStr .. char
-    end
-    return returnStr
+-- Fills a cell with equal (=) characters of the specified width.
+function FillCellWithEquals(width)
+    local equals = string.rep("=", width)
+    return equals
 end
 
+-- Retrieves the first name from a full name.
+function FirstName(name)
+    local firstName = string.match(name, "([^%s]+)")
+    return firstName or ""
+end
+
+-- Retrieves happiness data for a citizen.
 function GetHappiness(happiness)
-    local mult = 10 -- # of places
-    happiness = math.floor(happiness * mult + 0.5) / mult
+    local formattedHappiness = string.format("%4.1f", happiness)
     local textColor = colors.pink
 
     if happiness == 10.0 then
         textColor = colors.green
-    end
-
-    local formattedHappiness = string.format("%.1f", happiness)
-    if happiness < 10 then
-        formattedHappiness = " " .. formattedHappiness
     end
 
     return {
@@ -110,167 +76,85 @@ function GetHappiness(happiness)
     }
 end
 
+-- Retrieves the job status data for a citizen.
 function GetJobStatus(status)
     local statusText = {
-        ["Working"] = {
-            text = "Working",
-            color = colors.green
-        },
-        ["Farming"] = {
-            text = "Working",
-            color = colors.green
-        },
-        ["Delivering"] = {
-            text = "Working",
-            color = colors.green
-        },
-        ["Mining"] = {
-            text = "Working",
-            color = colors.green
-        },
-        ["Composting"] = {
-            text = "Working",
-            color = colors.green
-        },
-        ["Searching for trees"] = {
-            text = "Working",
-            color = colors.green
-        }
+        ["Working"] = {text = "Working", color = colors.green}
     }
 
-    if statusText[status] == nil then
-        return {
-            text = status,
-            color = colors.red
-        }
-    else
-        return statusText[status]
-    end
+    return statusText[status] or {text = status, color = colors.red}
 end
 
+-- Retrieves the color associated with a specific job.
 function SetJobColor(job)
     local jobColors = {
-        ["Knight"] = colors.magenta, -- does not work atm
+        ["Knight"] = colors.magenta,
         ["deliveryman"] = colors.yellow,
-        ["Archer"] = colors.pink, -- does not work atm
+        ["Archer"] = colors.pink, 
         ["builder"] = colors.brown,
-        ["Druid"] = colors.lime, -- does not work atm
+        ["Druid"] = colors.lime,
         ["enchanter"] = colors.purple,
         ["farmer"] = colors.cyan,
         ["school"] = colors.orange,
         ["university"] = colors.lightBlue
     }
-    if (jobColors[job] == nil) then
-        return colors.blue
-    else
-        return jobColors[job]
-    end
+    
+    return jobColors[job] or colors.blue
 end
 
+-- Calculates the distance between a bed and a work location.
 function GetBedDistance(bed, work)
     if bed == nil or work == nil then
         return ""
-    else
-        local bedY = bed["z"]
-        local bedX = bed["x"]
-        local workY = work["z"]
-        local workX = work["x"]
-        local distanceY = math.abs(workY - bedY)
-        local distanceX = math.abs(workX - bedX)
-        local distance = math.sqrt(distanceX ^ 2 + distanceY ^ 2)
-        local formattedDistance = string.format("%4.1f", distance)
-
-        local textColor = colors.green
-        if distance > 99 then
-            textColor = colors.red
-        elseif distance > 75 and distance < 100 then
-            textColor = colors.orange
-        elseif distance > 50 and distance < 76 then
-            textColor = colors.yellow
-        end
-
-        return {
-            value = formattedDistance,
-            color = textColor
-        }
     end
+
+    local bedY, bedX = bed.z, bed.x
+    local workY, workX = work.z, work.x
+    local distanceY = math.abs(workY - bedY)
+    local distanceX = math.abs(workX - bedX)
+    local distance = math.sqrt(distanceX ^ 2 + distanceY ^ 2)
+    local formattedDistance = string.format("%4.1f", distance)
+
+    local textColor = colors.green
+    if distance > 99 then
+        textColor = colors.red
+    elseif distance > 75 then
+        textColor = colors.orange
+    elseif distance > 50 then
+        textColor = colors.yellow
+    end
+
+    return {
+        value = formattedDistance,
+        color = textColor
+    }
 end
 
+-- Displays a table of citizens on the monitor.
 function ShowCitizens()
     local counter = 1
     local row = 1
     local column = 1
     local citizens = colony.getCitizens()
-    table.sort(citizens, SortTable)
+    table.sort(citizens, SortTable)  -- Compare and sort elements in a table using the SortTable function
     mon.setTextScale(0.5)
 
     -- Define the table headings
-    local headings = {{
-        name = "ID",
-        width = 4,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "|",
-        width = 1,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "Name",
-        width = 10,
-        alignment = "left",
-        color = colors.white
-    }, {
-        name = "|",
-        width = 1,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "Location (X, Y, Z)",
-        width = 19,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "|",
-        width = 1,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "Job",
-        width = 15,
-        alignment = "left",
-        color = colors.white
-    }, {
-        name = "|",
-        width = 1,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "Status",
-        width = 15,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "|",
-        width = 1,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "Happiness",
-        width = 10,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "|",
-        width = 1,
-        alignment = "center",
-        color = colors.white
-    }, {
-        name = "Commute",
-        width = 10,
-        alignment = "center",
-        color = colors.white
-    }}
+    local headings = {
+        {name = "ID", width = 4, alignment = "center", color = colors.white},
+        {name = "|", width = 1, alignment = "center", color = colors.white},
+        {name = "Name", width = 10, alignment = "left", color = colors.white},
+        {name = "|", width = 1, alignment = "center", color = colors.white},
+        {name = "Location (X, Y, Z)", width = 19, alignment = "center", color = colors.white},
+        {name = "|", width = 1, alignment = "center", color = colors.white},
+        {name = "Job", width = 15, alignment = "left", color = colors.white},
+        {name = "|", width = 1, alignment = "center", color = colors.white},
+        {name = "Status", width = 17, alignment = "center", color = colors.white},
+        {name = "|", width = 1, alignment = "center", color = colors.white},
+        {name = "Happiness", width = 10, alignment = "center", color = colors.white},
+        {name = "|", width = 1, alignment = "center", color = colors.white},
+        {name = "Commute", width = 10, alignment = "center", color = colors.white}
+    }
 
     mon.clear()
 
@@ -280,7 +164,7 @@ function ShowCitizens()
         local headingLength = #headingText
         mon.setTextColor(heading.color)
         mon.setCursorPos(column, 2)
-        mon.write("======================")
+        mon.write(FillCellWithEquals(heading.width+1))
 
         if heading.alignment == "left" then
             mon.setCursorPos(column, row)
@@ -308,17 +192,17 @@ function ShowCitizens()
     column = 1
 
     for _, citizen in ipairs(citizens) do
-        -- Erstelle die neuen Anzeigen für den Bürger
-        local id = citizen["id"]
-        local displayName = citizen["name"]
-        local locationX = FormatNumber(citizen["location"]["x"])
-        local locationY = FormatNumber(citizen["location"]["y"])
-        local locationZ = FormatNumber(citizen["location"]["z"])
-        local job = citizen["work"] and citizen["work"]["type"] or nil
-        local jobStatus = citizen["state"]
-        local happiness = citizen["happiness"]
-        local bedLocation = citizen["home"] and citizen["home"]["location"] or nil
-        local workLocation = citizen["work"] and citizen["work"]["location"] or nil
+        -- Get Data to opperate with
+        local id = citizen.id
+        local displayName = citizen.name
+        local locationX = FormatNumber(citizen.location.x)
+        local locationY = FormatNumber(citizen.location.y)
+        local locationZ = FormatNumber(citizen.location.z)
+        local job = citizen.work and citizen.work.type or nil
+        local jobStatus = citizen.state
+        local happiness = citizen.happiness
+        local bedLocation = citizen.home and citizen.home.location or nil
+        local workLocation = citizen.work and citizen.work.location or nil
 
         -- Write the citizen data to the monitor
         for _, heading in ipairs(headings) do
@@ -390,6 +274,7 @@ function ShowCitizens()
     end
 end
 
+-- Continuously displays the citizens table on the monitor.
 while true do
     ShowCitizens()
     sleep(1)
