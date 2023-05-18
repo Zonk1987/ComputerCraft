@@ -1,5 +1,5 @@
 -- Config
-local sortOpt = "ID" -- Set the desired sorting option (e.g., "Job", "Name", "ID")
+local sortOpt = "ID" -- Set the desired sorting option (e.g.: "Job", "Name", "ID")
 
 -- Checks if a peripheral with the specified name exists and returns it.
 -- Throws an error if the peripheral is not found.
@@ -18,51 +18,61 @@ print("Colony Integrator initialized.")
 local mon = checkPeripheral("monitor", "Monitor not found.")
 print("Monitor initialized.")
 
-
 -- Sorts a table based on the specified sorting option.
-function SortTable(a, b)
+local function SortTable(a, b)
     if sortOpt == "Job" then
         local aJob = a.work and a.work.type
         local bJob = b.work and b.work.type
-        return aJob and bJob and aJob < bJob
+        if aJob and bJob then
+            return aJob < bJob
+        else
+            -- Handle nil values by considering them as greater than non-nil values
+            return aJob ~= nil
+        end
     elseif sortOpt == "Name" then
-        return a.name and b.name and a.name < b.name
+        return a.name < b.name
     elseif sortOpt == "ID" then
         return (a.id or 0) < (b.id or 0)
     end
 end
 
 -- Converts the first character of a string to uppercase.
-function firstToUpper(str)
+local function firstToUpper(str)
     return (str or ""):gsub("^%l", string.upper)
 end
 
--- Converts a decimal number to a normal number by formatting it with leading spaces to a width of 2 characters.
-function decimal_to_normal(num)
-    local formattedNum = string.format("%2d", num or "")
-    return formattedNum
-end
-
 -- Formats a given number by padding it with leading spaces to a width of 3 characters.
-function FormatNumber(number)
+local function FormatNumber(number)
     local formattedNumber = string.format("%3d", number)
     return formattedNumber
 end
 
 -- Fills a cell with equal (=) characters of the specified width.
-function FillCellWithEquals(width)
+local function fillCellWithEquals(width)
     local equals = string.rep("=", width)
     return equals
 end
 
+-- draw a filled box 
+local function drawFilledBox(x, y, width, height, color)
+    -- Setze die gewünschte Farbe als Hintergrundfarbe
+    mon.setBackgroundColor(color)
+
+    -- Zeichne die gefüllte Box
+    for i = 0, height - 1 do
+        mon.setCursorPos(x, y + i)
+        mon.write(string.rep(" ", width))
+    end
+end
+
 -- Retrieves the first name from a full name.
-function FirstName(name)
+local function FirstName(name)
     local firstName = string.match(name, "([^%s]+)")
     return firstName or ""
 end
 
 -- Retrieves happiness data for a citizen.
-function GetHappiness(happiness)
+local function GetHappiness(happiness)
     local formattedHappiness = string.format("%4.1f", happiness)
     local textColor = colors.pink
 
@@ -78,32 +88,30 @@ end
 
 -- Retrieves the job status data for a citizen.
 function GetJobStatus(status)
-    local statusText = {
-        ["Working"] = {text = "Working", color = colors.green}
+    local jobStatusText = {
+        Working = { text = "Working", color = colors.green }
     }
-
-    return statusText[status] or {text = status, color = colors.red}
+    return jobStatusText[status] or { text = status, color = colors.red }
 end
 
 -- Retrieves the color associated with a specific job.
-function SetJobColor(job)
+local function SetJobColor(job)
     local jobColors = {
-        ["Knight"] = colors.magenta,
-        ["deliveryman"] = colors.yellow,
-        ["Archer"] = colors.pink, 
-        ["builder"] = colors.brown,
-        ["Druid"] = colors.lime,
-        ["enchanter"] = colors.purple,
-        ["farmer"] = colors.cyan,
-        ["school"] = colors.orange,
-        ["university"] = colors.lightBlue
+        Knight = colors.magenta,
+        deliveryman = colors.yellow,
+        Archer = colors.pink,
+        builder = colors.brown,
+        Druid = colors.lime,
+        enchanter = colors.purple,
+        farmer = colors.cyan,
+        school = colors.orange,
+        university = colors.lightBlue
     }
-    
     return jobColors[job] or colors.blue
 end
 
 -- Calculates the distance between a bed and a work location.
-function GetBedDistance(bed, work)
+local function GetBedDistance(bed, work)
     if bed == nil or work == nil then
         return ""
     end
@@ -130,28 +138,40 @@ function GetBedDistance(bed, work)
     }
 end
 
+-- Define the table headings as a constant variable
+local headings = {
+    {name = "ID",                   width = 4,      alignment = "center",   color = colors.white},
+    {name = "Name",                 width = 10,     alignment = "left",     color = colors.white},
+    {name = "Location (X, Y, Z)",   width = 19,     alignment = "center",   color = colors.white},
+    {name = "Job",                  width = 15,     alignment = "left",     color = colors.white},
+    {name = "Status",               width = 19,     alignment = "center",   color = colors.white},
+    {name = "Happiness",            width = 10,     alignment = "center",   color = colors.white},
+    {name = "Commute",              width = 10,     alignment = "center",   color = colors.white}
+}
+
 -- Displays a table of citizens on the monitor.
-function ShowCitizens()
+local function ShowCitizens()
     local counter = 1
-    local row = 5
+    local row = 6
     local column = 1
     local citizens = colony.getCitizens()
     table.sort(citizens, SortTable)  -- Compare and sort elements in a table using the SortTable function
-    mon.setTextScale(0.5)
+    
 
-    -- Define the table headings
-    local headings = {
-        {name = "ID", width = 4, alignment = "center", color = colors.white},
-        {name = "Name", width = 10, alignment = "left", color = colors.white},
-        {name = "Location (X, Y, Z)", width = 19, alignment = "center", color = colors.white},
-        {name = "Job", width = 15, alignment = "left", color = colors.white},
-        {name = "Status", width = 19, alignment = "center", color = colors.white},
-        {name = "Happiness", width = 10, alignment = "center", color = colors.white},
-        {name = "Commute", width = 10, alignment = "center", color = colors.white}
-    }
+    local numHeadings = #headings
 
     -- Clear the monitor
     mon.clear()
+    mon.setBackgroundColor(colors.black)
+
+    -- Calculate the total width of the table
+    local totalWidth = 0
+    for _, heading in ipairs(headings) do
+        totalWidth = totalWidth + heading.width
+    end
+    totalWidth = totalWidth + numHeadings - 1  -- Account for the separators '|'
+
+    mon.setTextScale(0.5)
 
     -- Write the table headings to the monitor
     for i, heading in ipairs(headings) do
@@ -159,22 +179,15 @@ function ShowCitizens()
         local headingText = string.sub(heading.name, 1, heading.width, heading.color)
         local headingLength = #headingText
 
-        -- Calculate the total width of the table
-        local totalWidth = 0
-        for _, heading in ipairs(headings) do
-            totalWidth = totalWidth + heading.width
-        end
-        totalWidth = totalWidth + #headings - 1  -- Account for the separators '|'
-
         -- Write the separator line between columns
-        if i < #headings then
+        if i < numHeadings then
             mon.setCursorPos(column + heading.width, row)
             mon.write("|")
         end
         
         -- Write the second line with equals sign
         mon.setCursorPos(1, row + 1)
-        mon.write(FillCellWithEquals(totalWidth)) 
+        mon.write(fillCellWithEquals(totalWidth)) 
 
         if heading.alignment == "left" then
             mon.setCursorPos(column, row)
@@ -219,7 +232,7 @@ function ShowCitizens()
             local contentAlignment = "left"
 
             if heading.name == "ID" then
-                content = decimal_to_normal(id)
+                content = FormatNumber(id)
                 contentAlignment = "center"
                 contentColor = colors.white
             elseif heading.name == "Name" then
@@ -273,8 +286,8 @@ function ShowCitizens()
             -- Write the content
             mon.write(content)
 
-            -- Write the separator line between columns
-            if i < #headings then
+            -- Write the separator line between columns '|'
+            if i < numHeadings then
                 mon.setCursorPos(column + heading.width, row)
                 mon.setTextColor(heading.color)
                 mon.write("|")
@@ -290,6 +303,7 @@ function ShowCitizens()
 end
 
 -- Continuously displays the citizens table on the monitor.
+drawFilledBox(1, 1, 93, 4, colors.red)
 while true do
     ShowCitizens()
     sleep(1)
