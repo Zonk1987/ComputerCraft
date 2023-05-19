@@ -1,6 +1,9 @@
 -- Config
 local sortOpt = "ID" -- Set the desired sorting option (e.g.: "Job", "Name", "ID")
 
+-- API's
+os.loadAPI("bigfont")
+
 -- Checks if a peripheral with the specified name exists and returns it.
 -- Throws an error if the peripheral is not found.
 local function checkPeripheral(name, errorMessage)
@@ -53,16 +56,34 @@ local function fillCellWithEquals(width)
     return equals
 end
 
--- draw a filled box 
-local function drawFilledBox(x, y, width, height, color)
-    -- Setze die gewünschte Farbe als Hintergrundfarbe
+-- Draw a filled box with a large header
+local function drawFilledBoxWithHeader(x, y, width, height, color, headerText)
+    -- Set the desired color as the background color
     mon.setBackgroundColor(color)
 
-    -- Zeichne die gefüllte Box
-    for i = 0, height - 1 do
-        mon.setCursorPos(x, y + i)
-        mon.write(string.rep(" ", width))
+    -- Calculate the position and size of the header
+    local headerHeight = 0
+    local headerX = x + math.floor((width - #headerText) / 2)
+    local headerY = y + math.floor((height - headerHeight) / 2)
+
+    -- Calculate the position of the filled box
+    local boxX = x
+    local boxY = y + headerHeight
+    local boxWidth = width
+    local boxHeight = height - headerHeight
+
+    -- Draw the filled box
+    for i = 0, boxHeight - 1 do
+        mon.setCursorPos(boxX, boxY + i)
+        mon.write(string.rep(" ", boxWidth))
     end
+
+    -- Set the color for the header
+    mon.setTextColor(colors.white)
+    mon.setBackgroundColor(color)
+
+    -- Draw the header
+    bigfont.writeOn(mon,1,headerText,25, 2)
 end
 
 -- Retrieves the first name from a full name.
@@ -87,7 +108,7 @@ local function GetHappiness(happiness)
 end
 
 -- Retrieves the job status data for a citizen.
-function GetJobStatus(status)
+local function GetJobStatus(status)
     local jobStatusText = {
         Working = { text = "Working", color = colors.green }
     }
@@ -138,10 +159,36 @@ local function GetBedDistance(bed, work)
     }
 end
 
+-- Compares two tables of citizens and returns true if they are equal, false otherwise.
+local function compareCitizens(citizens1, citizens2)
+    if #citizens1 ~= #citizens2 then
+        return false
+    end
+
+    for i, citizen1 in ipairs(citizens1) do
+        local citizen2 = citizens2[i]
+
+        if citizen1.id ~= citizen2.id or
+           citizen1.name ~= citizen2.name or
+           citizen1.location.x ~= citizen2.location.x or
+           citizen1.location.y ~= citizen2.location.y or
+           citizen1.location.z ~= citizen2.location.z or
+           (citizen1.work and citizen1.work.type) ~= (citizen2.work and citizen2.work.type) or
+           citizen1.state ~= citizen2.state or
+           citizen1.happiness ~= citizen2.happiness or
+           (citizen1.home and citizen1.home.location) ~= (citizen2.home and citizen2.home.location) or
+           (citizen1.work and citizen1.work.location) ~= (citizen2.work and citizen2.work.location) then
+           return false
+        end
+    end
+
+    return true
+end
+
 -- Define the table headings as a constant variable
 local headings = {
     {name = "ID",                   width = 4,      alignment = "center",   color = colors.white},
-    {name = "Name",                 width = 10,     alignment = "left",     color = colors.white},
+    {name = "Name",                 width = 11,     alignment = "left",     color = colors.white},
     {name = "Location (X, Y, Z)",   width = 19,     alignment = "center",   color = colors.white},
     {name = "Job",                  width = 15,     alignment = "left",     color = colors.white},
     {name = "Status",               width = 19,     alignment = "center",   color = colors.white},
@@ -149,29 +196,42 @@ local headings = {
     {name = "Commute",              width = 10,     alignment = "center",   color = colors.white}
 }
 
+local formattedHeadings = {} -- Format the table headings
+local sortedCitizens = {} -- Add a new variable to store the sorted citizens
+sortedCitizens = colony.getCitizens() or {} -- Initialize the sortedCitizens variable with an empty table
+local totalWidth = 0
+
+for _, heading in ipairs(headings) do
+    local formattedHeading = string.sub(heading.name, 1, heading.width)
+    totalWidth = totalWidth + heading.width
+    table.insert(formattedHeadings, formattedHeading)
+end
+
+-- Calculate the total width of the table
+totalWidth = totalWidth + #headings - 1  -- Account for the separators '|'
+
+-- Offset's the howl tabel
+local offset = 29
+
 -- Displays a table of citizens on the monitor.
 local function ShowCitizens()
     local counter = 1
-    local row = 6
-    local column = 1
-    local citizens = colony.getCitizens()
-    table.sort(citizens, SortTable)  -- Compare and sort elements in a table using the SortTable function
-    
+    local screenHeight, screenWidth = mon.getSize()
+    local row = 7
+    local column = math.floor(screenWidth / 2) - offset
+    -- Retrieve the newCitizens data
+    local citizens = colony.getCitizens() or {}
+    -- Only update the sortedCitizens if the data changes
+    if #citizens ~= #sortedCitizens or not compareCitizens(citizens, sortedCitizens) then
+        sortedCitizens = citizens
+        table.sort(sortedCitizens, SortTable)
+    end
 
     local numHeadings = #headings
-
+    
     -- Clear the monitor
-    mon.clear()
-    mon.setBackgroundColor(colors.black)
-
-    -- Calculate the total width of the table
-    local totalWidth = 0
-    for _, heading in ipairs(headings) do
-        totalWidth = totalWidth + heading.width
-    end
-    totalWidth = totalWidth + numHeadings - 1  -- Account for the separators '|'
-
     mon.setTextScale(0.5)
+    mon.clear()
 
     -- Write the table headings to the monitor
     for i, heading in ipairs(headings) do
@@ -186,7 +246,7 @@ local function ShowCitizens()
         end
         
         -- Write the second line with equals sign
-        mon.setCursorPos(1, row + 1)
+        mon.setCursorPos(math.floor(screenWidth / 2) - offset, row + 1)
         mon.write(fillCellWithEquals(totalWidth)) 
 
         if heading.alignment == "left" then
@@ -211,7 +271,7 @@ local function ShowCitizens()
     end
 
     row = row + 2
-    column = 1
+    column = math.floor(screenWidth / 2) - offset
 
     for _, citizen in ipairs(citizens) do
         -- Get Data to opperate with
@@ -230,6 +290,7 @@ local function ShowCitizens()
         for i, heading in ipairs(headings) do
             local content = ""
             local contentAlignment = "left"
+            local contentColor = nil
 
             if heading.name == "ID" then
                 content = FormatNumber(id)
@@ -298,13 +359,14 @@ local function ShowCitizens()
 
         row = row + 1
         counter = counter + 1
-        column = 1
+        column = math.floor(screenWidth / 2) - offset
     end
 end
 
 -- Continuously displays the citizens table on the monitor.
-drawFilledBox(1, 1, 93, 4, colors.red)
 while true do
     ShowCitizens()
+    drawFilledBoxWithHeader(1, 1, mon.getSize(), 5, colors.lightGray, "Citizen Statistic")
+    mon.setBackgroundColor(colors.black)
     sleep(1)
 end
