@@ -3,6 +3,7 @@ local sortOpt = "ID" -- Set the desired sorting option (e.g.: "Job", "Name", "ID
 
 -- API's
 os.loadAPI("bigfont")
+os.loadAPI("button.lua")
 
 -- Checks if a peripheral with the specified name exists and returns it.
 -- Throws an error if the peripheral is not found.
@@ -20,6 +21,9 @@ print("Colony Integrator initialized.")
 -- Check if "monitor" peripheral exists and assign it to "mon"
 local mon = checkPeripheral("monitor", "Monitor not found.")
 print("Monitor initialized.")
+
+
+button.setMonitor(mon)
 
 -- Sorts a table based on the specified sorting option.
 local function SortTable(a, b)
@@ -84,6 +88,7 @@ local function drawFilledBoxWithHeader(x, y, width, height, color, headerText)
 
     -- Draw the header
     bigfont.writeOn(mon,1,headerText,25, 2)
+    
 end
 
 -- Retrieves the first name from a full name.
@@ -211,7 +216,17 @@ end
 totalWidth = totalWidth + #headings - 1  -- Account for the separators '|'
 
 -- Offset's the howl tabel
-local offset = 29
+local monWidth, monHeight = mon.getSize()
+print(mon.getSize())
+local offset = 0
+
+if monHeight == 52 then
+    offset = 22
+elseif monHeight == 67 then
+    offset = 28.5
+elseif monHeight == 81 then
+    offset = 36
+end
 
 -- Displays a table of citizens on the monitor.
 local function ShowCitizens()
@@ -363,8 +378,15 @@ local function ShowCitizens()
     end
 end
 
+local next = button.create(" > ").setPos(99 - 3, 1).setAlign("center").setSize(5, 5)
+local prev = button.create(" < ").setPos(1, 1).setAlign("center").setSize(5, 5)
+
+next.onClick(function() print("NEXT!") end)
+prev.onClick(function() print("PREV!") end)
+
 -- Continuously displays the citizens table on the monitor.
 while true do
+    button.await(next, prev)
     ShowCitizens()
     drawFilledBoxWithHeader(1, 1, mon.getSize(), 5, colors.lightGray, "Citizen Statistic")
     mon.setBackgroundColor(colors.black)
