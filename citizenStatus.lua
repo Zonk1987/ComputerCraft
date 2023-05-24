@@ -1,5 +1,5 @@
 -- Config
-local sortOpt = "ID" -- Set the desired sorting option (e.g.: "Job", "Name", "ID")
+local sortOpt = "Job" -- Set the desired sorting option (e.g.: "Job", "Name", "ID")
 
 -- API's
 os.loadAPI("bigfont")
@@ -21,7 +21,6 @@ print("Colony Integrator initialized.")
 -- Check if "monitor" peripheral exists and assign it to "mon"
 local mon = checkPeripheral("monitor", "Monitor not found.")
 print("Monitor initialized.")
-
 
 button.setMonitor(mon)
 
@@ -88,7 +87,6 @@ local function drawFilledBoxWithHeader(x, y, width, height, color, headerText)
 
     -- Draw the header
     bigfont.writeOn(mon,1,headerText,25, 2)
-    
 end
 
 -- Retrieves the first name from a full name.
@@ -285,6 +283,8 @@ local function ShowCitizens()
         column = column + heading.width + 1
     end
 
+    
+
     row = row + 2
     column = math.floor(screenWidth / 2) - offset
 
@@ -378,17 +378,22 @@ local function ShowCitizens()
     end
 end
 
-local next = button.create(" > ").setPos(99 - 3, 1).setAlign("center").setSize(5, 5)
-local prev = button.create(" < ").setPos(1, 1).setAlign("center").setSize(5, 5)
-
-next.onClick(function() print("NEXT!") end)
-prev.onClick(function() print("PREV!") end)
+local next = button.create().setText(">").setPos(96, 1).setAlign("center").setSize(5, 5).onClick(function() print("NEXT!") end)
+local prev = button.create().setText("<").setPos(1, 1).setAlign("center").setSize(5, 5).onClick(function() print("PREV!") end)
 
 -- Continuously displays the citizens table on the monitor.
-while true do
-    button.await(next, prev)
-    ShowCitizens()
-    drawFilledBoxWithHeader(1, 1, mon.getSize(), 5, colors.lightGray, "Citizen Statistic")
-    mon.setBackgroundColor(colors.black)
-    sleep(1)
+local function main()
+    while true do
+        ShowCitizens()
+        drawFilledBoxWithHeader(1, 1, mon.getSize(), 5, colors.lightGray, "Citizen Statistic")
+        mon.setBackgroundColor(colors.black)
+    end
 end
+
+local function buttons()
+    while true do
+        button.await(next, prev)
+    end
+end
+
+parallel.waitForAny(main,buttons)
