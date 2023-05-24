@@ -171,8 +171,10 @@ local function compareCitizens(citizens1, citizens2)
     for i, citizen1 in ipairs(citizens1) do
         local citizen2 = citizens2[i]
 
-        if citizen1.id ~= citizen2.id or
+        if not citizen1 or not citizen2 or
+           citizen1.id ~= citizen2.id or
            citizen1.name ~= citizen2.name or
+           not citizen1.location or not citizen2.location or
            citizen1.location.x ~= citizen2.location.x or
            citizen1.location.y ~= citizen2.location.y or
            citizen1.location.z ~= citizen2.location.z or
@@ -199,10 +201,29 @@ local headings = {
     {name = "Commute",              width = 10,     alignment = "center",   color = colors.white}
 }
 
+-- Offset's the howl tabel
+local monWidth, monHeight = mon.getSize()
+print(mon.getSize())
+local offset = 0
+local pageSize = 0
+
+if monHeight == 52 then -- Monitor size = 4 Blocks height 5 Blocks Width
+    offset = 22
+    pageSize = 43 -- Set the number of citizens to display per page
+elseif monHeight == 67 then -- Monitor size = 5 Blocks height 5 Blocks Width
+    offset = 28.5
+    pageSize = 58 -- Set the number of citizens to display per page
+elseif monHeight == 81 then -- Monitor size = 6 Blocks height 5 Blocks Width
+    offset = 36
+    pageSize = 74 -- Set the number of citizens to display per page
+end
+
 local formattedHeadings = {} -- Format the table headings
 local sortedCitizens = {} -- Add a new variable to store the sorted citizens
 sortedCitizens = colony.getCitizens() or {} -- Initialize the sortedCitizens variable with an empty table
 local totalWidth = 0
+
+local totalPages = math.ceil(#sortedCitizens / pageSize)
 
 for _, heading in ipairs(headings) do
     local formattedHeading = string.sub(heading.name, 1, heading.width)
@@ -213,27 +234,20 @@ end
 -- Calculate the total width of the table
 totalWidth = totalWidth + #headings - 1  -- Account for the separators '|'
 
--- Offset's the howl tabel
-local monWidth, monHeight = mon.getSize()
-print(mon.getSize())
-local offset = 0
-
-if monHeight == 52 then
-    offset = 22
-elseif monHeight == 67 then
-    offset = 28.5
-elseif monHeight == 81 then
-    offset = 36
-end
-
 -- Displays a table of citizens on the monitor.
-local function ShowCitizens()
+local function ShowCitizens(page)
     local counter = 1
     local screenHeight, screenWidth = mon.getSize()
     local row = 7
     local column = math.floor(screenWidth / 2) - offset
+
+    -- Verifying the page number is within the valid range
+    page = math.max(page, 1)
+    page = math.min(page, totalPages)
+
     -- Retrieve the newCitizens data
     local citizens = colony.getCitizens() or {}
+
     -- Only update the sortedCitizens if the data changes
     if #citizens ~= #sortedCitizens or not compareCitizens(citizens, sortedCitizens) then
         sortedCitizens = citizens
@@ -288,112 +302,131 @@ local function ShowCitizens()
     row = row + 2
     column = math.floor(screenWidth / 2) - offset
 
-    for _, citizen in ipairs(citizens) do
+    -- Write the citizen data to the monitor
+    local startIdx = (page - 1) * pageSize + 1
+    local endIdx = math.min(startIdx + pageSize - 1, #sortedCitizens)
+
+    for i = startIdx, endIdx do
+        local citizen = sortedCitizens[i]
         -- Get Data to opperate with
-        local id = citizen.id
-        local displayName = citizen.name
-        local locationX = FormatNumber(citizen.location.x)
-        local locationY = FormatNumber(citizen.location.y)
-        local locationZ = FormatNumber(citizen.location.z)
-        local job = citizen.work and citizen.work.type or nil
-        local jobStatus = citizen.state
-        local happiness = citizen.happiness
-        local bedLocation = citizen.home and citizen.home.location or nil
-        local workLocation = citizen.work and citizen.work.location or nil
+        if citizen then
+            local id = citizen.id
+            local displayName = citizen.name
+            local locationX = FormatNumber(citizen.location.x)
+            local locationY = FormatNumber(citizen.location.y)
+            local locationZ = FormatNumber(citizen.location.z)
+            local job = citizen.work and citizen.work.type or nil
+            local jobStatus = citizen.state
+            local happiness = citizen.happiness
+            local bedLocation = citizen.home and citizen.home.location or nil
+            local workLocation = citizen.work and citizen.work.location or nil
 
-        -- Write the citizen data to the monitor
-        for i, heading in ipairs(headings) do
-            local content = ""
-            local contentAlignment = "left"
-            local contentColor = nil
+            -- Write the citizen data to the monitor
+            for i, heading in ipairs(headings) do
+                local content = ""
+                local contentAlignment = "left"
+                local contentColor = nil
 
-            if heading.name == "ID" then
-                content = FormatNumber(id)
-                contentAlignment = "center"
-                contentColor = colors.white
-            elseif heading.name == "Name" then
-                content = FirstName(displayName)
-                contentAlignment = "left"
-                contentColor = colors.blue
-            elseif heading.name == "Location (X, Y, Z)" then
-                content = "(" .. locationX .. "," .. locationY .. "," .. locationZ .. ")"
-                contentAlignment = "center"
-                contentColor = colors.white
-            elseif heading.name == "Job" then
-                content = firstToUpper(job or "")
-                contentAlignment = "left"
-                contentColor = SetJobColor(job)
-            elseif heading.name == "Status" then
-                local statusData = GetJobStatus(jobStatus)
-                content = statusData.text
-                contentColor = statusData.color
-                contentAlignment = "center"
-            elseif heading.name == "Happiness" then
-                local happinessData = GetHappiness(happiness)
-                content = happinessData.value
-                contentColor = happinessData.color
-                contentAlignment = "center"
-            elseif heading.name == "Commute" then
-                local distanceData = GetBedDistance(bedLocation, workLocation)
-                content = distanceData.value
-                contentColor = distanceData.color
-                contentAlignment = "center"
+                if heading.name == "ID" then
+                    content = FormatNumber(id)
+                    contentAlignment = "center"
+                    contentColor = colors.white
+                elseif heading.name == "Name" then
+                    content = FirstName(displayName)
+                    contentAlignment = "left"
+                    contentColor = colors.blue
+                elseif heading.name == "Location (X, Y, Z)" then
+                    content = "(" .. locationX .. "," .. locationY .. "," .. locationZ .. ")"
+                    contentAlignment = "center"
+                    contentColor = colors.white
+                elseif heading.name == "Job" then
+                    content = firstToUpper(job or "")
+                    contentAlignment = "left"
+                    contentColor = SetJobColor(job)
+                elseif heading.name == "Status" then
+                    local statusData = GetJobStatus(jobStatus)
+                    content = statusData.text
+                    contentColor = statusData.color
+                    contentAlignment = "center"
+                elseif heading.name == "Happiness" then
+                    local happinessData = GetHappiness(happiness)
+                    content = happinessData.value
+                    contentColor = happinessData.color
+                    contentAlignment = "center"
+                elseif heading.name == "Commute" then
+                    local distanceData = GetBedDistance(bedLocation, workLocation)
+                    content = distanceData.value
+                    contentColor = distanceData.color
+                    contentAlignment = "center"
+                end
+
+                -- Set the cursor position based on alignment
+                local contentLength = content and string.len(content) or 0
+                local contentPadding = heading.width - contentLength
+
+                if contentAlignment == "left" then
+                    mon.setCursorPos(column, row)
+                elseif contentAlignment == "center" then
+                    local contentLeftPadding = math.floor(contentPadding / 2)
+                    local contentRightPadding = contentPadding - contentLeftPadding
+                    mon.setCursorPos(column + contentLeftPadding, row)
+                elseif contentAlignment == "right" then
+                    mon.setCursorPos(column + contentPadding, row)
+                end
+
+                -- Set content color
+                if contentColor then
+                    mon.setTextColor(contentColor)
+                end
+
+                -- Write the content
+                mon.write(content)
+
+                -- Write the separator line between columns '|'
+                if i < numHeadings then
+                    mon.setCursorPos(column + heading.width, row)
+                    mon.setTextColor(heading.color)
+                    mon.write("|")
+                end
+
+                column = column + heading.width + 1
             end
-
-            -- Set the cursor position based on alignment
-            local contentLength = content and string.len(content) or 0
-            local contentPadding = heading.width - contentLength
-
-            if contentAlignment == "left" then
-                mon.setCursorPos(column, row)
-            elseif contentAlignment == "center" then
-                local contentLeftPadding = math.floor(contentPadding / 2)
-                local contentRightPadding = contentPadding - contentLeftPadding
-                mon.setCursorPos(column + contentLeftPadding, row)
-            elseif contentAlignment == "right" then
-                mon.setCursorPos(column + contentPadding, row)
-            end
-
-            -- Set content color
-            if contentColor then
-                mon.setTextColor(contentColor)
-            end
-
-            -- Write the content
-            mon.write(content)
-
-            -- Write the separator line between columns '|'
-            if i < numHeadings then
-                mon.setCursorPos(column + heading.width, row)
-                mon.setTextColor(heading.color)
-                mon.write("|")
-            end
-
-            column = column + heading.width + 1
         end
-
         row = row + 1
         counter = counter + 1
         column = math.floor(screenWidth / 2) - offset
     end
 end
 
-local next = button.create().setText(">").setPos(96, 1).setAlign("center").setSize(5, 5).onClick(function() print("NEXT!") end)
-local prev = button.create().setText("<").setPos(1, 1).setAlign("center").setSize(5, 5).onClick(function() print("PREV!") end)
+local currentPage = 1
+
+-- Create previous and next buttons
+local next = button.create().setText(">").setPos(96, 1).setAlign("center").setSize(5, 5)
+local prev = button.create().setText("<").setPos(1, 1).setAlign("center").setSize(5, 5)
+
+-- Create previous and next buttons
+next.onClick(function() currentPage = currentPage + 1 ShowCitizens(currentPage) end)
+prev.onClick(function() currentPage = currentPage - 1 ShowCitizens(currentPage) end)
+
 
 -- Continuously displays the citizens table on the monitor.
 local function main()
-    while true do
-        ShowCitizens()
-        drawFilledBoxWithHeader(1, 1, mon.getSize(), 5, colors.lightGray, "Citizen Statistic")
-        mon.setBackgroundColor(colors.black)
+    ShowCitizens(currentPage)
+    drawFilledBoxWithHeader(1, 1, mon.getSize(), 5, colors.lightGray, "Citizen Statistic")
+    mon.setBackgroundColor(colors.black)
+    button.await(next, prev)
+
+    if currentPage < 1 then
+        currentPage = 1
+    elseif currentPage > totalPages then
+        currentPage = totalPages
     end
 end
 
-local function buttons()
-    while true do
-        button.await(next, prev)
-    end
+local function wait()
+    sleep(0)
 end
 
-parallel.waitForAny(main,buttons)
+while true do
+    parallel.waitForAny(main,wait)
+end
