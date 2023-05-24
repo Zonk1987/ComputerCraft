@@ -1,5 +1,7 @@
 -- Config
 local sortOpt = "Job" -- Set the desired sorting option (e.g.: "Job", "Name", "ID")
+local pageSize = 40 -- Set the number of citizens to display per page
+
 
 -- API's
 os.loadAPI("bigfont")
@@ -201,23 +203,6 @@ local headings = {
     {name = "Commute",              width = 10,     alignment = "center",   color = colors.white}
 }
 
--- Offset's the howl tabel
-local monWidth, monHeight = mon.getSize()
-print(mon.getSize())
-local offset = 0
-local pageSize = 0
-
-if monHeight == 52 then -- Monitor size = 4 Blocks height 5 Blocks Width
-    offset = 22
-    pageSize = 43 -- Set the number of citizens to display per page
-elseif monHeight == 67 then -- Monitor size = 5 Blocks height 5 Blocks Width
-    offset = 28.5
-    pageSize = 58 -- Set the number of citizens to display per page
-elseif monHeight == 81 then -- Monitor size = 6 Blocks height 5 Blocks Width
-    offset = 36
-    pageSize = 74 -- Set the number of citizens to display per page
-end
-
 local formattedHeadings = {} -- Format the table headings
 local sortedCitizens = {} -- Add a new variable to store the sorted citizens
 sortedCitizens = colony.getCitizens() or {} -- Initialize the sortedCitizens variable with an empty table
@@ -233,6 +218,8 @@ end
 
 -- Calculate the total width of the table
 totalWidth = totalWidth + #headings - 1  -- Account for the separators '|'
+
+local offset = 22
 
 -- Displays a table of citizens on the monitor.
 local function ShowCitizens(page)
@@ -396,6 +383,10 @@ local function ShowCitizens(page)
         counter = counter + 1
         column = math.floor(screenWidth / 2) - offset
     end
+    local screenWidth, screenHeight = mon.getSize()
+    mon.setCursorPos(screenWidth - 8, screenHeight)
+    mon.setTextColor(colors.white)
+    mon.write("[Page " .. string.format("%2d", page) .. "]")
 end
 
 local currentPage = 1
@@ -424,7 +415,7 @@ local function main()
 end
 
 local function wait()
-    sleep(0)
+    sleep(1)
 end
 
 while true do
