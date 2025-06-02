@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run AI Reviewer with Summarizer
-        uses: anc95/chatgpt-pr-review@v1.3.1
+        uses: anc95/ChatGPT-CodeReview@v1.0.21
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run AI Reviewer as Issue Creator
-        uses: anc95/chatgpt-pr-review@v1.3.1
+        uses: anc95/ChatGPT-CodeReview@v1.0.21
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
