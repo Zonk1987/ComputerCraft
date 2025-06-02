@@ -1,0 +1,53 @@
+name: AI Code Review & Suggestions
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: ${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ai-pr-review:
+    name: AI Review with ChatGPT Summarizer
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run AI Reviewer with Summarizer
+        uses: anc95/chatgpt-pr-review@v1.5
+        with:
+          openai-key: ${{ secrets.OPENAI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          language: lua
+          review-comment-languages: en
+          enable-summary: true
+
+  ai-issue-suggestions:
+    name: AI Suggestions as GitHub Issues
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run AI Reviewer as Issue Creator
+        uses: anc95/chatgpt-pr-review@v1.5
+        with:
+          openai-key: ${{ secrets.OPENAI_API_KEY }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          language: lua
+          enable-review: true
+          enable-summary: true
+          enable-create-issues: true
+          issue-labels: "enhancement, ai-suggestion"
+          issue-title-prefix: "AI Suggestion: "
