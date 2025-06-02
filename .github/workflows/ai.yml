@@ -29,27 +29,3 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          language: lua
-          review-comment-languages: en
-          enable-summary: true
-
-  ai-issue-suggestions:
-    name: AI Suggestions as GitHub Issues
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Run AI Reviewer as Issue Creator
-        uses: anc95/ChatGPT-CodeReview@v1.0.21
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          language: lua
-          enable-review: true
-          enable-summary: true
-          enable-create-issues: true
-          issue-labels: "enhancement, ai-suggestion"
-          issue-title-prefix: "AI Suggestion: "
